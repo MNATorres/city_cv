@@ -1,0 +1,199 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Orbitron:wght@400;700;900&display=swap');
+
+:root {
+  /* Colors - Light Theme */
+  --bg-primary: #eef2f7;
+  --bg-secondary: rgba(255, 255, 255, 0.7);
+  --bg-tertiary: rgba(241, 245, 249, 0.5);
+  
+  --accent-cyan: #0284c7;
+  --accent-purple: #7c3aed;
+  --accent-green: #16a34a;
+  --accent-amber: #d97706;
+  
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  
+  --border-glow: rgba(2, 132, 199, 0.2);
+  --border-glow-hover: rgba(2, 132, 199, 0.5);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  
+  /* Fonts */
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-cyber: 'Orbitron', 'Outfit', monospace;
+  
+  /* Shadow */
+  --shadow-neon: 0 4px 20px rgba(2, 132, 199, 0.15);
+  --shadow-neon-purple: 0 4px 20px rgba(124, 58, 237, 0.15);
+  --shadow-glass: 0 8px 32px 0 rgba(148, 163, 184, 0.15);
+  
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  display: block;
+}
+
+/* Canvas Container */
+.canvas-container {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+/* Glassmorphism General Style */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-glass);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel:hover {
+  border-color: rgba(0, 240, 255, 0.2);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(6, 8, 20, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.6);
+}
+
+/* HUD Overlay Styles */
+.hud-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Let clicks pass through to canvas */
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+.hud-interactive {
+  pointer-events: auto; /* Re-enable clicks for UI elements */
+}
+
+/* Neon Text Glow */
+.text-neon-cyan {
+  color: var(--accent-cyan);
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+}
+
+.text-neon-purple {
+  color: var(--accent-purple);
+  text-shadow: 0 0 8px rgba(189, 0, 255, 0.5);
+}
+
+.text-neon-green {
+  color: var(--accent-green);
+  text-shadow: 0 0 8px rgba(57, 255, 20, 0.5);
+}
+
+/* Animations */
+@keyframes neon-pulse {
+  0%, 100% {
+    opacity: 0.95;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 25px rgba(0, 240, 255, 0.6), 0 0 5px rgba(0, 240, 255, 0.3);
+  }
+}
+
+@keyframes grid-glow {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.neon-active {
+  animation: neon-pulse 2s infinite alternate;
+}
+
+/* 3D Label overlay */
+.building-label-3d {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--text-primary);
+  font-family: var(--font-cyber);
+  font-size: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translate(-50%, -130%);
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.building-label-3d::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px 5px 0;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.95) transparent;
+  display: block;
+  width: 0;
+}
+
+/* Focus styles for buttons */
+button:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
