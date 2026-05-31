@@ -155,7 +155,7 @@ export const Building: React.FC<BuildingProps> = ({
       onPointerOut={(e) => {
         e.stopPropagation();
         setHovered(false);
-        document.body.style.cursor = 'default';
+        document.body.style.cursor = '';
       }}
     >
       {/* Modelo Kenney GLTF clonado */}
@@ -186,7 +186,7 @@ export const Building: React.FC<BuildingProps> = ({
 
       {/* Etiqueta HTML Flotante 3D (Se muestra en hover o si está seleccionado) */}
       {(hovered || isSelected) && (
-        <Html distanceFactor={15} center position={[0, type === 'hq' ? 3.0 : 1.5, 0]}>
+        <Html pointerEvents="none" distanceFactor={15} center position={[0, type === 'hq' ? 3.0 : 1.5, 0]}>
           <div className="building-label-3d">
             {name}
           </div>

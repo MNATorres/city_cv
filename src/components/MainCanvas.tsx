@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { MapControls, OrthographicCamera } from '@react-three/drei';
+import { OrbitControls, OrthographicCamera } from '@react-three/drei';
 import * as THREE from 'three';
 import { CityGrid } from './CityGrid';
 import { cvData } from '../cvData';
@@ -18,6 +18,9 @@ const CameraController: React.FC<CameraControllerProps> = ({ focusedBuildingPos 
   // Posición objetivo de la cámara
   const targetCamPos = useRef(new THREE.Vector3(12, 12, 12));
 
+  // Ref para controlar si hay una transición de enfoque activa
+  const isTransitioning = useRef(false);
+
   useEffect(() => {
     if (focusedBuildingPos) {
       // Centrar el target del control en el edificio seleccionado (y=0)
@@ -33,32 +36,62 @@ const CameraController: React.FC<CameraControllerProps> = ({ focusedBuildingPos 
       targetLookAt.current.set(0, 0, 0);
       targetCamPos.current.set(12, 12, 12);
     }
+    // Activar transición automática al enfocar
+    isTransitioning.current = true;
   }, [focusedBuildingPos]);
 
+  // Escuchar cuando el usuario arrastra manualmente los controles para cancelar el enfoque automático
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    const handleStart = () => {
+      isTransitioning.current = false;
+    };
+
+    controls.addEventListener('start', handleStart);
+    return () => {
+      controls.removeEventListener('start', handleStart);
+    };
+  }, []);
+
   useFrame((_, delta) => {
-    // Lerp para suavizar el movimiento de la cámara y del objetivo (target)
-    const lerpSpeed = 5 * delta; // Ajusta según la velocidad deseada
+    // Si no estamos en transición, no interferimos con OrbitControls
+    if (!isTransitioning.current) return;
+
+    const lerpSpeed = 5 * delta;
     
-    // Suavizar el target del control de mapa
     if (controlsRef.current) {
+      // Lerp del target
       controlsRef.current.target.lerp(targetLookAt.current, lerpSpeed);
+      // Lerp de la posición de la cámara
+      camera.position.lerp(targetCamPos.current, lerpSpeed);
       controlsRef.current.update();
+
+      // Verificar si ya estamos lo suficientemente cerca del objetivo
+      const distTarget = controlsRef.current.target.distanceTo(targetLookAt.current);
+      const distCam = camera.position.distanceTo(targetCamPos.current);
+
+      if (distTarget < 0.02 && distCam < 0.02) {
+        // Ajustar de forma exacta y desactivar transición
+        controlsRef.current.target.copy(targetLookAt.current);
+        camera.position.copy(targetCamPos.current);
+        controlsRef.current.update();
+        isTransitioning.current = false;
+      }
     }
-    
-    // Suavizar la posición de la cámara
-    camera.position.lerp(targetCamPos.current, lerpSpeed);
   });
 
   return (
-    <MapControls
+    <OrbitControls
       ref={controlsRef}
       enableDamping
       dampingFactor={0.05}
-      screenSpacePanning={false}
+      screenSpacePanning={true}
       minZoom={20}
       maxZoom={90}
-      maxPolarAngle={Math.PI / 3} // Evita ver demasiado horizontal
-      minPolarAngle={Math.PI / 6} // Evita ver completamente desde arriba
+      maxPolarAngle={Math.PI / 2.1} // Permite girar y ver casi de lado
+      minPolarAngle={0.05} // Permite vista cenital
     />
   );
 };
