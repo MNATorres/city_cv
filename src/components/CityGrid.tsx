@@ -73,22 +73,22 @@ export const CityGrid: React.FC<CityGridProps> = ({
     return [x, 0.05, z];
   };
 
-  // Coordenadas de los caminos de tráfico (rutas perimetrales ajustadas a la cuadrícula 10x6)
+  // Coordenadas de los caminos de tráfico (rutas alineadas con las calles de la cuadrícula 10x6)
   const carPaths = [
     [
-      { x: -11.25, y: 0.1, z: -6.25 },
-      { x: 11.25, y: 0.1, z: -6.25 },
-      { x: 11.25, y: 0.1, z: 6.25 },
-      { x: -11.25, y: 0.1, z: 6.25 },
+      { x: -10.0, y: 0.1, z: -5.0 },
+      { x: 10.0, y: 0.1, z: -5.0 },
+      { x: 10.0, y: 0.1, z: 5.0 },
+      { x: -10.0, y: 0.1, z: 5.0 },
     ]
   ];
 
   const pedestrianPaths = [
     [
-      { x: -6.25, y: 0.03, z: -3.75 },
-      { x: 6.25, y: 0.03, z: -3.75 },
-      { x: 6.25, y: 0.03, z: 3.75 },
-      { x: -6.25, y: 0.03, z: 3.75 },
+      { x: -5.0, y: 0.03, z: -2.5 },
+      { x: 5.0, y: 0.03, z: -2.5 },
+      { x: 5.0, y: 0.03, z: 2.5 },
+      { x: -5.0, y: 0.03, z: 2.5 },
     ]
   ];
 
@@ -106,133 +106,178 @@ export const CityGrid: React.FC<CityGridProps> = ({
   // Renderizar manzanas de la cuadrícula
   const renderBlocks = () => {
     const blocks: React.ReactNode[] = [];
+    const scaleFactor = 0.42; // Escala para cada casa dentro del cuadrante
 
     for (let c = 0; c < cols; c++) {
       for (let r = 0; r < rows; r++) {
-        const position = getCoords(c, r);
+        const [x, y, z] = getCoords(c, r);
         const blockId = `block-${c}-${r}`;
 
-        // 1. Verificar si hay un elemento de CV en esta manzana
+        // 1. Verificar si es un parque o el Ayuntamiento
         const isHQ = c === 4 && r === 2;
-        const expItem = cvData.experience.find(e => e.gridPos.x === c && e.gridPos.z === r);
-        const projItem = cvData.projects.find(p => p.gridPos.x === c && p.gridPos.z === r);
-        const eduItem = cvData.education.find(ed => ed.gridPos.x === c && ed.gridPos.z === r);
-        const skillItem = cvData.skills.find(s => s.gridPos.x === c && s.gridPos.z === r);
 
-        // Si es un parque, dibujamos un parque verde y continuamos
         if (checkIsPark(c, r)) {
-          blocks.push(<Park key={blockId} position={position} />);
+          blocks.push(<Park key={blockId} position={[x, y, z]} />);
           continue;
         }
 
-        // 2. Renderizar la plataforma de la manzana (base de cemento claro)
-        const isSelected = 
-          (isHQ && selectedBuildingId === 'hq') ||
-          (expItem && selectedBuildingId === expItem.id) ||
-          (projItem && selectedBuildingId === projItem.id) ||
-          (eduItem && selectedBuildingId === eduItem.id) ||
-          (skillItem && selectedBuildingId === skillItem.id) ||
-          (selectedBuildingId === blockId);
-
-        blocks.push(
-          <group key={`plat-${blockId}`} position={position}>
-            <mesh receiveShadow castShadow>
-              <boxGeometry args={[2.0, 0.05, 2.0]} />
-              <meshStandardMaterial
-                color={isSelected ? '#e0f2fe' : '#ffffff'}
-                roughness={0.5}
-                metalness={0.1}
-              />
-            </mesh>
-            {/* Pequeña cuadrícula o borde para darle detalle estilo FOE */}
-            <mesh position={[0, 0.026, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[0.92, 0.98, 4]} />
-              <meshBasicMaterial color={isSelected ? '#00f0ff' : '#cbd5e1'} transparent opacity={0.5} />
-            </mesh>
-          </group>
-        );
-
-        // 3. Renderizar el Edificio correspondiente
         if (isHQ) {
+          // El Ayuntamiento central (HQ) se queda en tamaño normal y centrado
+          blocks.push(
+            <group key={`plat-${blockId}`} position={[x, y, z]}>
+              <mesh receiveShadow castShadow>
+                <boxGeometry args={[2.0, 0.05, 2.0]} />
+                <meshStandardMaterial
+                  color={selectedBuildingId === 'hq' ? '#e0f2fe' : '#ffffff'}
+                  roughness={0.5}
+                  metalness={0.1}
+                />
+              </mesh>
+              <mesh position={[0, 0.026, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[0.92, 0.98, 4]} />
+                <meshBasicMaterial color={selectedBuildingId === 'hq' ? '#00f0ff' : '#cbd5e1'} transparent opacity={0.5} />
+              </mesh>
+            </group>
+          );
           blocks.push(
             <Building
-              key={blockId}
+              key={`building-${blockId}`}
               id="hq"
               name="Centro de Comando (BIO)"
               type="hq"
-              position={position}
+              position={[x, y, z]}
               size={[1, 1]}
               isSelected={selectedBuildingId === 'hq'}
               onClick={() => onSelectBuilding('hq')}
             />
           );
-        } else if (expItem) {
-          blocks.push(
-            <Building
-              key={blockId}
-              id={expItem.id}
-              name={`${expItem.role} @ ${expItem.company.split(' ')[0]}`}
-              type={expItem.buildingType}
-              position={position}
-              size={expItem.size}
-              isSelected={selectedBuildingId === expItem.id}
-              onClick={() => onSelectBuilding(expItem.id)}
-            />
-          );
-        } else if (projItem) {
-          blocks.push(
-            <Building
-              key={blockId}
-              id={projItem.id}
-              name={projItem.name}
-              type={projItem.buildingType}
-              position={position}
-              size={projItem.size}
-              isSelected={selectedBuildingId === projItem.id}
-              onClick={() => onSelectBuilding(projItem.id)}
-            />
-          );
-        } else if (eduItem) {
-          blocks.push(
-            <Building
-              key={blockId}
-              id={eduItem.id}
-              name={eduItem.degree.split(' ')[0] + ' (' + eduItem.institution.split(' ')[0] + ')'}
-              type={eduItem.buildingType}
-              position={position}
-              size={eduItem.size}
-              isSelected={selectedBuildingId === eduItem.id}
-              onClick={() => onSelectBuilding(eduItem.id)}
-            />
-          );
-        } else if (skillItem) {
-          // Las habilidades se renderizan como "casas comunes" interactivas
-          blocks.push(
-            <Building
-              key={blockId}
-              id={skillItem.id}
-              name={`Habilidad: ${skillItem.name}`}
-              type="house"
-              position={position}
-              size={[1, 1]}
-              isSelected={selectedBuildingId === skillItem.id}
-              onClick={() => onSelectBuilding(skillItem.id)}
-            />
-          );
-        } else {
-          // El resto son casas comunes decorativas que también muestran un mensaje
-          blocks.push(
-            <Building
-              key={blockId}
-              id={blockId}
-              name="Sector Residencial"
-              type="house"
-              position={position}
-              size={[1, 1]}
-              isSelected={selectedBuildingId === blockId}
-              onClick={() => onSelectBuilding(blockId)}
-            />
-          );
+          continue;
+        }
+
+        // 2. Buscar si hay algún elemento de CV o Habilidad en esta manzana
+        const expItem = cvData.experience.find(e => e.gridPos.x === c && e.gridPos.z === r);
+        const projItem = cvData.projects.find(p => p.gridPos.x === c && p.gridPos.z === r);
+        const eduItem = cvData.education.find(ed => ed.gridPos.x === c && ed.gridPos.z === r);
+        const skillItem = cvData.skills.find(s => s.gridPos.x === c && s.gridPos.z === r);
+
+        // Si alguna casa de esta manzana está seleccionada, la plataforma brilla
+        const isBlockSelected = 
+          (expItem && selectedBuildingId === expItem.id) ||
+          (projItem && selectedBuildingId === projItem.id) ||
+          (eduItem && selectedBuildingId === eduItem.id) ||
+          (skillItem && selectedBuildingId === skillItem.id) ||
+          selectedBuildingId === `${blockId}-q0` ||
+          selectedBuildingId === `${blockId}-q1` ||
+          selectedBuildingId === `${blockId}-q2` ||
+          selectedBuildingId === `${blockId}-q3`;
+
+        // Renderizar la plataforma de la manzana
+        blocks.push(
+          <group key={`plat-${blockId}`} position={[x, y, z]}>
+            <mesh receiveShadow castShadow>
+              <boxGeometry args={[2.0, 0.05, 2.0]} />
+              <meshStandardMaterial
+                color={isBlockSelected ? '#e0f2fe' : '#ffffff'}
+                roughness={0.5}
+                metalness={0.1}
+              />
+            </mesh>
+            <mesh position={[0, 0.026, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[0.92, 0.98, 4]} />
+              <meshBasicMaterial color={isBlockSelected ? '#00f0ff' : '#cbd5e1'} transparent opacity={0.5} />
+            </mesh>
+          </group>
+        );
+
+        // Definir los 4 cuadrantes dentro de la manzana (grid de 2x2)
+        const o = 0.45; // Offset respecto al centro
+        const subPositions: [number, number, number][] = [
+          [x - o, y, z - o], // Cuadrante 0
+          [x + o, y, z - o], // Cuadrante 1
+          [x - o, y, z + o], // Cuadrante 2
+          [x + o, y, z + o], // Cuadrante 3
+        ];
+
+        // 3. Renderizar las 4 casas por manzana
+        for (let q = 0; q < 4; q++) {
+          const subPos = subPositions[q];
+          const subId = `${blockId}-q${q}`;
+
+          // Si hay un elemento de CV en este bloque, lo colocamos en el primer cuadrante (q === 0)
+          if (q === 0 && (expItem || projItem || eduItem || skillItem)) {
+            if (expItem) {
+              blocks.push(
+                <Building
+                  key={`building-${subId}`}
+                  id={expItem.id}
+                  name={`${expItem.role} @ ${expItem.company.split(' ')[0]}`}
+                  type={expItem.buildingType}
+                  position={subPos}
+                  size={[0.5, 0.5]}
+                  isSelected={selectedBuildingId === expItem.id}
+                  onClick={() => onSelectBuilding(expItem.id)}
+                  scale={scaleFactor}
+                />
+              );
+            } else if (projItem) {
+              blocks.push(
+                <Building
+                  key={`building-${subId}`}
+                  id={projItem.id}
+                  name={projItem.name}
+                  type={projItem.buildingType}
+                  position={subPos}
+                  size={[0.5, 0.5]}
+                  isSelected={selectedBuildingId === projItem.id}
+                  onClick={() => onSelectBuilding(projItem.id)}
+                  scale={scaleFactor}
+                />
+              );
+            } else if (eduItem) {
+              blocks.push(
+                <Building
+                  key={`building-${subId}`}
+                  id={eduItem.id}
+                  name={eduItem.degree.split(' ')[0] + ' (' + eduItem.institution.split(' ')[0] + ')'}
+                  type={eduItem.buildingType}
+                  position={subPos}
+                  size={[0.5, 0.5]}
+                  isSelected={selectedBuildingId === eduItem.id}
+                  onClick={() => onSelectBuilding(eduItem.id)}
+                  scale={scaleFactor}
+                />
+              );
+            } else if (skillItem) {
+              blocks.push(
+                <Building
+                  key={`building-${subId}`}
+                  id={skillItem.id}
+                  name={`Habilidad: ${skillItem.name}`}
+                  type="house"
+                  position={subPos}
+                  size={[0.5, 0.5]}
+                  isSelected={selectedBuildingId === skillItem.id}
+                  onClick={() => onSelectBuilding(skillItem.id)}
+                  scale={scaleFactor}
+                />
+              );
+            }
+          } else {
+            // Casas comunes de relleno decorativo
+            blocks.push(
+              <Building
+                key={`building-${subId}`}
+                id={subId}
+                name="Sector Residencial"
+                type="house"
+                position={subPos}
+                size={[0.5, 0.5]}
+                isSelected={selectedBuildingId === subId}
+                onClick={() => onSelectBuilding(subId)}
+                scale={scaleFactor}
+              />
+            );
+          }
         }
       }
     }
