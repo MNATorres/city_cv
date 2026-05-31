@@ -106,7 +106,7 @@ export const CityGrid: React.FC<CityGridProps> = ({
   // Renderizar manzanas de la cuadrícula
   const renderBlocks = () => {
     const blocks: React.ReactNode[] = [];
-    const scaleFactor = 0.42; // Escala para cada casa dentro del cuadrante
+    const scaleFactor = 0.90; // Escala para cada casa dentro del cuadrante (ocupa 0.9 unidades, dejando 0.1 de vereda)
 
     for (let c = 0; c < cols; c++) {
       for (let r = 0; r < rows; r++) {

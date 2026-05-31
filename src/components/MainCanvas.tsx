@@ -146,11 +146,13 @@ export const MainCanvas: React.FC<MainCanvasProps> = ({
         {/* Niebla clara diurna para profundidad espacial */}
         <fog attach="fog" args={['#eef2f7', 40, 110]} />
 
-        {/* Grid de la ciudad, calles y edificios */}
-        <CityGrid
-          selectedBuildingId={selectedBuildingId}
-          onSelectBuilding={onSelectBuilding}
-        />
+        {/* Grid de la ciudad, calles y edificios envuelto en Suspense para carga de modelos GLB */}
+        <React.Suspense fallback={null}>
+          <CityGrid
+            selectedBuildingId={selectedBuildingId}
+            onSelectBuilding={onSelectBuilding}
+          />
+        </React.Suspense>
 
         {/* Controlador de Cámara */}
         <CameraController focusedBuildingPos={focusedBuildingPos} />
