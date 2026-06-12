@@ -132,14 +132,14 @@ export const MainCanvas: React.FC<MainCanvasProps> = ({
         onPointerMissed={() => onSelectBuilding(null)} // Cerrar modal al hacer clic en el vacío
       >
         {/* Color de fondo del Canvas (combinado con el CSS de la app) */}
-        <color attach="background" args={['#eef2f7']} />
+        <color attach="background" args={['#bae6fd']} />
         
         {/* Cámara Ortográfica predeterminada para el look isométrico tipo FOE */}
         <OrthographicCamera
           makeDefault
           position={[12, 12, 12]}
           zoom={35}
-          near={0.1}
+          near={-500}
           far={1000}
         />
 
@@ -173,11 +173,11 @@ export const MainCanvas: React.FC<MainCanvasProps> = ({
 
         {/* 4. Luz de Rebote en el Suelo */}
         <hemisphereLight
-          args={['#ffffff', '#cbd5e1', 0.4]}
+          args={['#ffffff', '#bbf7d0', 0.45]}
         />
 
         {/* Niebla clara diurna para profundidad espacial */}
-        <fog attach="fog" args={['#eef2f7', 40, 110]} />
+        <fog attach="fog" args={['#bae6fd', 45, 100]} />
 
         {/* Grid de la ciudad, calles y edificios envuelto en Suspense para carga de modelos GLB */}
         <React.Suspense fallback={null}>

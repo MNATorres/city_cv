@@ -8,6 +8,76 @@ interface CityGridProps {
   onSelectBuilding: (id: string | null) => void;
 }
 
+// Componente de Árbol de Pradera procedimental
+const MeadowTree: React.FC<{ position: [number, number, number]; scale?: number }> = ({ position, scale = 1.0 }) => {
+  const hash = Math.sin(position[0] * 12.9898 + position[2] * 78.233) * 43758.5453;
+  const treeType = Math.floor(Math.abs(hash * 10)) % 3;
+  const heightScale = 0.85 + (Math.abs(hash) % 0.3);
+  const finalScale = scale * heightScale;
+  
+  return (
+    <group position={position} scale={[finalScale, finalScale, finalScale]}>
+      {treeType === 0 && (
+        <group>
+          <mesh castShadow position={[0, 0.2, 0]}>
+            <cylinderGeometry args={[0.07, 0.07, 0.4, 8]} />
+            <meshStandardMaterial color="#78350f" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 0.55, 0]} castShadow>
+            <coneGeometry args={[0.28, 0.6, 8]} />
+            <meshStandardMaterial color="#16a34a" roughness={0.8} />
+          </mesh>
+        </group>
+      )}
+
+      {treeType === 1 && (
+        <group>
+          <mesh castShadow position={[0, 0.15, 0]}>
+            <cylinderGeometry args={[0.06, 0.06, 0.3, 8]} />
+            <meshStandardMaterial color="#78350f" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 0.4, 0]} castShadow>
+            <sphereGeometry args={[0.22, 8, 8]} />
+            <meshStandardMaterial color="#15803d" roughness={0.8} />
+          </mesh>
+        </group>
+      )}
+
+      {treeType === 2 && (
+        <group>
+          <mesh castShadow position={[0, 0.18, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.35, 8]} />
+            <meshStandardMaterial color="#78350f" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 0.48, 0]} castShadow>
+            <coneGeometry args={[0.22, 0.5, 8]} />
+            <meshStandardMaterial color="#22c55e" roughness={0.8} />
+          </mesh>
+        </group>
+      )}
+    </group>
+  );
+};
+
+// Componente de Arbusto de Pradera procedimental
+const MeadowBush: React.FC<{ position: [number, number, number]; scale?: number }> = ({ position, scale = 1.0 }) => {
+  const hash = Math.sin(position[0] * 12.9898 + position[2] * 78.233) * 43758.5453;
+  const bushScale = 0.7 + (Math.abs(hash) % 0.5);
+  
+  return (
+    <group position={position} scale={[scale * bushScale, scale * bushScale, scale * bushScale]}>
+      <mesh castShadow position={[0, 0.1, 0]}>
+        <dodecahedronGeometry args={[0.15, 0]} />
+        <meshStandardMaterial color="#16a34a" roughness={0.9} flatShading />
+      </mesh>
+      <mesh castShadow position={[0.1, 0.07, -0.05]} scale={[0.8, 0.8, 0.8]}>
+        <dodecahedronGeometry args={[0.15, 0]} />
+        <meshStandardMaterial color="#15803d" roughness={0.9} flatShading />
+      </mesh>
+    </group>
+  );
+};
+
 // Componente para un Parque con árboles procedimentales bajos en polígonos
 const Park: React.FC<{ position: [number, number, number] }> = ({ position }) => {
   return (
@@ -296,6 +366,65 @@ export const CityGrid: React.FC<CityGridProps> = ({
           metalness={0.1}
         />
       </mesh>
+
+      {/* SUELO DE PASTO AL REDEDOR: Plano inmenso de césped verde */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
+        <planeGeometry args={[500, 500]} />
+        <meshStandardMaterial
+          color="#86efac" // Verde pasto claro, a tono con los parques
+          roughness={0.9}
+        />
+      </mesh>
+
+      {/* VEGETACIÓN EN LOS ALREDEDORES (ÁRBOLES Y ARBUSTOS) */}
+      {/* Lado izquierdo (X < -13) */}
+      <MeadowTree position={[-16, -0.05, 5]} scale={1.2} />
+      <MeadowTree position={[-15, -0.05, -5]} scale={0.9} />
+      <MeadowTree position={[-18, -0.05, -8]} scale={1.1} />
+      <MeadowTree position={[-24, -0.05, -2]} scale={1.3} />
+      <MeadowTree position={[-20, -0.05, 8]} scale={1.0} />
+      <MeadowTree position={[-28, -0.05, 4]} scale={1.4} />
+      <MeadowTree position={[-22, -0.05, -12]} scale={1.25} />
+      <MeadowBush position={[-14, -0.05, 7]} scale={1.0} />
+      <MeadowBush position={[-18, -0.05, 2]} scale={1.2} />
+      <MeadowBush position={[-22, -0.05, -6]} scale={1.1} />
+      <MeadowBush position={[-16, -0.05, -10]} scale={0.8} />
+
+      {/* Lado derecho (X > 13) */}
+      <MeadowTree position={[15, -0.05, -6]} scale={1.1} />
+      <MeadowTree position={[16, -0.05, 3]} scale={0.95} />
+      <MeadowTree position={[22, -0.05, -5]} scale={1.25} />
+      <MeadowTree position={[25, -0.05, 5]} scale={1.0} />
+      <MeadowTree position={[14, -0.05, 9]} scale={0.8} />
+      <MeadowTree position={[28, -0.05, -2]} scale={1.35} />
+      <MeadowTree position={[19, -0.05, 12]} scale={1.15} />
+      <MeadowBush position={[18, -0.05, -3]} scale={1.1} />
+      <MeadowBush position={[20, -0.05, 7]} scale={1.0} />
+      <MeadowBush position={[23, -0.05, -9]} scale={0.9} />
+      <MeadowBush position={[16, -0.05, -11]} scale={1.2} />
+
+      {/* Lado trasero (Z < -8) */}
+      <MeadowTree position={[-8, -0.05, -12]} scale={1.05} />
+      <MeadowTree position={[8, -0.05, -13]} scale={1.15} />
+      <MeadowTree position={[0, -0.05, -15]} scale={1.3} />
+      <MeadowTree position={[-4, -0.05, -10]} scale={0.85} />
+      <MeadowTree position={[3, -0.05, -11]} scale={0.9} />
+      <MeadowTree position={[-12, -0.05, -14]} scale={1.2} />
+      <MeadowTree position={[12, -0.05, -15]} scale={1.25} />
+      <MeadowBush position={[-12, -0.05, -10]} scale={1.15} />
+      <MeadowBush position={[11, -0.05, -11]} scale={1.0} />
+      <MeadowBush position={[-2, -0.05, -13]} scale={0.95} />
+
+      {/* Lado delantero (Z > 8) */}
+      <MeadowTree position={[-6, -0.05, 12]} scale={1.1} />
+      <MeadowTree position={[6, -0.05, 13]} scale={1.0} />
+      <MeadowTree position={[-1, -0.05, 11]} scale={0.85} />
+      <MeadowTree position={[10, -0.05, 11]} scale={1.2} />
+      <MeadowTree position={[-11, -0.05, 13]} scale={1.25} />
+      <MeadowTree position={[12, -0.05, 14]} scale={1.1} />
+      <MeadowBush position={[12, -0.05, 11]} scale={1.1} />
+      <MeadowBush position={[-10, -0.05, 11]} scale={1.0} />
+      <MeadowBush position={[2, -0.05, 12]} scale={0.9} />
 
       {/* REJILLA DE CALLES LONGITUDINALES Y TRANSVERSALES */}
       {/* 9 Calles Verticales */}
