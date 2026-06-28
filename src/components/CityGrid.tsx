@@ -1,4 +1,5 @@
 import React from 'react';
+import { Instances, Instance } from '@react-three/drei';
 import { Building } from './Building';
 import { Traffic } from './Traffic';
 import { cvData } from '../cvData';
@@ -410,6 +411,36 @@ export const CityGrid: React.FC<CityGridProps> = ({
     return items;
   }, [islandW, islandD]);
 
+  // Marcas viales discontinuas (líneas centrales amarillas) para cada calle.
+  // Se renderizan con InstancedMesh (drei <Instances>) para minimizar draw calls.
+  const vStreetLen = rows * spacing - 0.4;
+  const hStreetLen = cols * spacing - 0.4;
+  const roadDashes = React.useMemo(() => {
+    const dashes: { pos: [number, number, number]; scale: [number, number, number] }[] = [];
+    const dashLen = 0.65;
+    const period = 1.7;
+    const dashW = 0.07;
+    // Calles verticales (línea central larga en Z)
+    for (let i = 0; i < cols - 1; i++) {
+      const x = (i - (cols - 2) / 2) * spacing;
+      const n = Math.floor(vStreetLen / period);
+      const start = -((n - 1) * period) / 2;
+      for (let d = 0; d < n; d++) {
+        dashes.push({ pos: [x, 0.022, start + d * period], scale: [dashW, dashLen, 1] });
+      }
+    }
+    // Calles horizontales (línea central larga en X)
+    for (let i = 0; i < rows - 1; i++) {
+      const z = (i - (rows - 2) / 2) * spacing;
+      const n = Math.floor(hStreetLen / period);
+      const start = -((n - 1) * period) / 2;
+      for (let d = 0; d < n; d++) {
+        dashes.push({ pos: [start + d * period, 0.022, z], scale: [dashLen, dashW, 1] });
+      }
+    }
+    return dashes;
+  }, [cols, rows, spacing, vStreetLen, hStreetLen]);
+
   return (
     <group>
       {/* ISLA PRINCIPAL: Plato de concreto blanco que delimita la ciudad. Fuera de esto no hay detalles */}
@@ -438,14 +469,14 @@ export const CityGrid: React.FC<CityGridProps> = ({
           : <MeadowBush key={`veg-${i}`} position={v.pos} scale={v.scale} />
       )}
 
-      {/* REJILLA DE CALLES LONGITUDINALES Y TRANSVERSALES */}
-      {/* Calles Verticales */}
+      {/* REJILLA DE CALLES DE ASFALTO LONGITUDINALES Y TRANSVERSALES */}
+      {/* Calles Verticales (asfalto oscuro, dejando una vereda blanca a los lados) */}
       {Array.from({ length: cols - 1 }).map((_, i) => {
         const x = (i - (cols - 2) / 2) * spacing;
         return (
           <mesh key={`v-street-${i}`} position={[x, 0.015, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[0.3, rows * spacing - 0.2]} />
-            <meshStandardMaterial color="#e2e8f0" roughness={0.9} />
+            <planeGeometry args={[0.42, vStreetLen]} />
+            <meshStandardMaterial color="#3c4250" roughness={0.95} metalness={0.0} />
           </mesh>
         );
       })}
@@ -455,11 +486,20 @@ export const CityGrid: React.FC<CityGridProps> = ({
         const z = (i - (rows - 2) / 2) * spacing;
         return (
           <mesh key={`h-street-${i}`} position={[0, 0.015, z]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[cols * spacing - 0.2, 0.3]} />
-            <meshStandardMaterial color="#e2e8f0" roughness={0.9} />
+            <planeGeometry args={[hStreetLen, 0.42]} />
+            <meshStandardMaterial color="#3c4250" roughness={0.95} metalness={0.0} />
           </mesh>
         );
       })}
+
+      {/* LÍNEAS CENTRALES DISCONTINUAS (un solo draw call vía InstancedMesh) */}
+      <Instances limit={roadDashes.length} range={roadDashes.length}>
+        <planeGeometry args={[1, 1]} />
+        <meshStandardMaterial color="#f5c84b" roughness={0.6} emissive="#3a2c00" emissiveIntensity={0.2} />
+        {roadDashes.map((d, i) => (
+          <Instance key={`dash-${i}`} position={d.pos} rotation={[-Math.PI / 2, 0, 0]} scale={d.scale} />
+        ))}
+      </Instances>
 
       {/* RENDERIZADO DE LAS MANZANAS, EDIFICIOS Y PARQUES */}
       {renderBlocks()}
