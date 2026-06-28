@@ -131,10 +131,17 @@ export const CityGrid: React.FC<CityGridProps> = ({
   selectedBuildingId,
   onSelectBuilding,
 }) => {
-  // Dimensiones de la cuadrícula: 10 columnas por 6 filas
-  const cols = 10;
-  const rows = 6;
+  // El CV vive en una cuadrícula lógica de 10x6, pero la metrópolis se extiende
+  // mucho más allá con manzanas residenciales y parques alrededor del núcleo.
+  const cvCols = 10;
+  const cvRows = 6;
+  const cols = 16; // Ancho total de la ciudad
+  const rows = 10; // Profundidad total de la ciudad
   const spacing = 2.5; // Tamaño manzana (2.0) + Calle (0.5)
+
+  // Desplazamiento para mantener la cuadrícula del CV centrada dentro de la ciudad
+  const offsetC = Math.floor((cols - cvCols) / 2); // 3
+  const offsetR = Math.floor((rows - cvRows) / 2); // 2
 
   // Función para transformar coordenadas de manzana (C, R) a coordenadas 3D (X, Y, Z)
   const getCoords = (c: number, r: number): [number, number, number] => {
@@ -143,34 +150,41 @@ export const CityGrid: React.FC<CityGridProps> = ({
     return [x, 0.05, z];
   };
 
-  // Coordenadas de los caminos de tráfico (rutas alineadas con las calles de la cuadrícula 10x6)
+  // Semilla determinista por manzana (para parques y decoración pseudo-aleatorios estables)
+  const blockHash = (c: number, r: number): number =>
+    Math.abs(Math.sin(c * 49.13 + r * 91.7) * 43758.5453) % 1.0;
+
+  // Mitad del ancho/profundidad del anillo de calles perimetrales (justo dentro de la ciudad)
+  const ringX = (cols / 2 - 0.5) * spacing; // 18.75
+  const ringZ = (rows / 2 - 0.5) * spacing; // 11.25
+
+  // Coordenadas de los caminos de tráfico (anillo perimetral de la metrópolis)
   const carPaths = [
     [
-      { x: -10.0, y: 0.1, z: -5.0 },
-      { x: 10.0, y: 0.1, z: -5.0 },
-      { x: 10.0, y: 0.1, z: 5.0 },
-      { x: -10.0, y: 0.1, z: 5.0 },
+      { x: -ringX, y: 0.1, z: -ringZ },
+      { x: ringX, y: 0.1, z: -ringZ },
+      { x: ringX, y: 0.1, z: ringZ },
+      { x: -ringX, y: 0.1, z: ringZ },
     ]
   ];
 
   const pedestrianPaths = [
     [
-      { x: -5.0, y: 0.03, z: -2.5 },
-      { x: 5.0, y: 0.03, z: -2.5 },
-      { x: 5.0, y: 0.03, z: 2.5 },
-      { x: -5.0, y: 0.03, z: 2.5 },
+      { x: -ringX / 2, y: 0.03, z: -ringZ / 2 },
+      { x: ringX / 2, y: 0.03, z: -ringZ / 2 },
+      { x: ringX / 2, y: 0.03, z: ringZ / 2 },
+      { x: -ringX / 2, y: 0.03, z: ringZ / 2 },
     ]
   ];
 
-  // Determinar si una manzana debe ser un parque verde decorativo
-  const checkIsPark = (c: number, r: number): boolean => {
-    // Parques en esquinas y puntos intermedios seleccionados de los bordes para equilibrio visual
+  // ¿Esta manzana (en coordenadas del CV) es un parque del núcleo?
+  const checkIsCorePark = (cvC: number, cvR: number): boolean => {
     const parkCoords = [
       {c: 0, r: 0}, {c: 9, r: 0}, {c: 0, r: 5}, {c: 9, r: 5},
       {c: 0, r: 2}, {c: 9, r: 2}, {c: 4, r: 0}, {c: 5, r: 0},
       {c: 4, r: 5}, {c: 5, r: 5}
     ];
-    return parkCoords.some(p => p.c === c && p.r === r);
+    return parkCoords.some(p => p.c === cvC && p.r === cvR);
   };
 
   // Renderizar manzanas de la cuadrícula
@@ -183,10 +197,20 @@ export const CityGrid: React.FC<CityGridProps> = ({
         const [x, y, z] = getCoords(c, r);
         const blockId = `block-${c}-${r}`;
 
-        // 1. Verificar si es un parque o el Ayuntamiento
-        const isHQ = c === 4 && r === 2;
+        // Coordenadas equivalentes dentro de la cuadrícula lógica del CV (10x6)
+        const cvC = c - offsetC;
+        const cvR = r - offsetR;
+        const inCore = cvC >= 0 && cvC < cvCols && cvR >= 0 && cvR < cvRows;
 
-        if (checkIsPark(c, r)) {
+        // 1. Verificar si es el Ayuntamiento (centro de la cuadrícula del CV)
+        const isHQ = inCore && cvC === 4 && cvR === 2;
+
+        // Parques: los del núcleo en posiciones fijas; en el anillo exterior, dispersos
+        const isPark = inCore
+          ? checkIsCorePark(cvC, cvR)
+          : blockHash(c, r) < 0.28;
+
+        if (isPark) {
           blocks.push(<Park key={blockId} position={[x, y, z]} />);
           continue;
         }
@@ -224,11 +248,11 @@ export const CityGrid: React.FC<CityGridProps> = ({
           continue;
         }
 
-        // 2. Buscar si hay algún elemento de CV o Habilidad en esta manzana
-        const expItem = cvData.experience.find(e => e.gridPos.x === c && e.gridPos.z === r);
-        const projItem = cvData.projects.find(p => p.gridPos.x === c && p.gridPos.z === r);
-        const eduItem = cvData.education.find(ed => ed.gridPos.x === c && ed.gridPos.z === r);
-        const skillItem = cvData.skills.find(s => s.gridPos.x === c && s.gridPos.z === r);
+        // 2. Buscar si hay algún elemento de CV o Habilidad en esta manzana (en coords del núcleo)
+        const expItem = inCore ? cvData.experience.find(e => e.gridPos.x === cvC && e.gridPos.z === cvR) : undefined;
+        const projItem = inCore ? cvData.projects.find(p => p.gridPos.x === cvC && p.gridPos.z === cvR) : undefined;
+        const eduItem = inCore ? cvData.education.find(ed => ed.gridPos.x === cvC && ed.gridPos.z === cvR) : undefined;
+        const skillItem = inCore ? cvData.skills.find(s => s.gridPos.x === cvC && s.gridPos.z === cvR) : undefined;
 
         // Si alguna casa de esta manzana está seleccionada, la plataforma brilla
         const isBlockSelected = 
@@ -355,11 +379,42 @@ export const CityGrid: React.FC<CityGridProps> = ({
     return blocks;
   };
 
+  // Dimensiones de la isla de concreto que delimita la metrópolis
+  const islandW = cols * spacing + 2; // 42
+  const islandD = rows * spacing + 3; // 28
+
+  // Bosque procedimental que rodea la isla (determinista para no re-aleatorizar en cada render)
+  const vegetation = React.useMemo(() => {
+    const items: { tree: boolean; pos: [number, number, number]; scale: number }[] = [];
+    const h = (n: number) => Math.abs(Math.sin(n * 127.1 + 311.7) * 43758.5453) % 1.0;
+    const halfX = islandW / 2 + 1.5; // empieza justo fuera de la isla
+    const halfZ = islandD / 2 + 1.5;
+    const bands = 2;     // profundidad del bosque
+    const perX = 17;     // densidad lados superior/inferior
+    const perZ = 11;     // densidad lados izquierdo/derecho
+    let k = 1;
+    for (let b = 0; b < bands; b++) {
+      const gx = halfX + b * 3.4;
+      const gz = halfZ + b * 3.4;
+      for (let i = 0; i < perX; i++) {
+        const x = -gx + (i / (perX - 1)) * 2 * gx + (h(k++) - 0.5) * 2.6;
+        items.push({ tree: h(k++) > 0.32, pos: [x, -0.05, gz + (h(k++) - 0.5) * 2.2], scale: 0.8 + h(k++) * 0.9 });
+        items.push({ tree: h(k++) > 0.32, pos: [x, -0.05, -gz - (h(k++) - 0.5) * 2.2], scale: 0.8 + h(k++) * 0.9 });
+      }
+      for (let i = 0; i < perZ; i++) {
+        const z = -gz + (i / (perZ - 1)) * 2 * gz + (h(k++) - 0.5) * 2.6;
+        items.push({ tree: h(k++) > 0.32, pos: [gx + (h(k++) - 0.5) * 2.2, -0.05, z], scale: 0.8 + h(k++) * 0.9 });
+        items.push({ tree: h(k++) > 0.32, pos: [-gx - (h(k++) - 0.5) * 2.2, -0.05, z], scale: 0.8 + h(k++) * 0.9 });
+      }
+    }
+    return items;
+  }, [islandW, islandD]);
+
   return (
     <group>
       {/* ISLA PRINCIPAL: Plato de concreto blanco que delimita la ciudad. Fuera de esto no hay detalles */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
-        <planeGeometry args={[26, 16]} />
+        <planeGeometry args={[islandW, islandD]} />
         <meshStandardMaterial
           color="#f8fafc"
           roughness={0.9}
@@ -376,74 +431,31 @@ export const CityGrid: React.FC<CityGridProps> = ({
         />
       </mesh>
 
-      {/* VEGETACIÓN EN LOS ALREDEDORES (ÁRBOLES Y ARBUSTOS) */}
-      {/* Lado izquierdo (X < -13) */}
-      <MeadowTree position={[-16, -0.05, 5]} scale={1.2} />
-      <MeadowTree position={[-15, -0.05, -5]} scale={0.9} />
-      <MeadowTree position={[-18, -0.05, -8]} scale={1.1} />
-      <MeadowTree position={[-24, -0.05, -2]} scale={1.3} />
-      <MeadowTree position={[-20, -0.05, 8]} scale={1.0} />
-      <MeadowTree position={[-28, -0.05, 4]} scale={1.4} />
-      <MeadowTree position={[-22, -0.05, -12]} scale={1.25} />
-      <MeadowBush position={[-14, -0.05, 7]} scale={1.0} />
-      <MeadowBush position={[-18, -0.05, 2]} scale={1.2} />
-      <MeadowBush position={[-22, -0.05, -6]} scale={1.1} />
-      <MeadowBush position={[-16, -0.05, -10]} scale={0.8} />
-
-      {/* Lado derecho (X > 13) */}
-      <MeadowTree position={[15, -0.05, -6]} scale={1.1} />
-      <MeadowTree position={[16, -0.05, 3]} scale={0.95} />
-      <MeadowTree position={[22, -0.05, -5]} scale={1.25} />
-      <MeadowTree position={[25, -0.05, 5]} scale={1.0} />
-      <MeadowTree position={[14, -0.05, 9]} scale={0.8} />
-      <MeadowTree position={[28, -0.05, -2]} scale={1.35} />
-      <MeadowTree position={[19, -0.05, 12]} scale={1.15} />
-      <MeadowBush position={[18, -0.05, -3]} scale={1.1} />
-      <MeadowBush position={[20, -0.05, 7]} scale={1.0} />
-      <MeadowBush position={[23, -0.05, -9]} scale={0.9} />
-      <MeadowBush position={[16, -0.05, -11]} scale={1.2} />
-
-      {/* Lado trasero (Z < -8) */}
-      <MeadowTree position={[-8, -0.05, -12]} scale={1.05} />
-      <MeadowTree position={[8, -0.05, -13]} scale={1.15} />
-      <MeadowTree position={[0, -0.05, -15]} scale={1.3} />
-      <MeadowTree position={[-4, -0.05, -10]} scale={0.85} />
-      <MeadowTree position={[3, -0.05, -11]} scale={0.9} />
-      <MeadowTree position={[-12, -0.05, -14]} scale={1.2} />
-      <MeadowTree position={[12, -0.05, -15]} scale={1.25} />
-      <MeadowBush position={[-12, -0.05, -10]} scale={1.15} />
-      <MeadowBush position={[11, -0.05, -11]} scale={1.0} />
-      <MeadowBush position={[-2, -0.05, -13]} scale={0.95} />
-
-      {/* Lado delantero (Z > 8) */}
-      <MeadowTree position={[-6, -0.05, 12]} scale={1.1} />
-      <MeadowTree position={[6, -0.05, 13]} scale={1.0} />
-      <MeadowTree position={[-1, -0.05, 11]} scale={0.85} />
-      <MeadowTree position={[10, -0.05, 11]} scale={1.2} />
-      <MeadowTree position={[-11, -0.05, 13]} scale={1.25} />
-      <MeadowTree position={[12, -0.05, 14]} scale={1.1} />
-      <MeadowBush position={[12, -0.05, 11]} scale={1.1} />
-      <MeadowBush position={[-10, -0.05, 11]} scale={1.0} />
-      <MeadowBush position={[2, -0.05, 12]} scale={0.9} />
+      {/* BOSQUE PERIMETRAL PROCEDIMENTAL (árboles y arbustos rodeando la metrópolis) */}
+      {vegetation.map((v, i) =>
+        v.tree
+          ? <MeadowTree key={`veg-${i}`} position={v.pos} scale={v.scale} />
+          : <MeadowBush key={`veg-${i}`} position={v.pos} scale={v.scale} />
+      )}
 
       {/* REJILLA DE CALLES LONGITUDINALES Y TRANSVERSALES */}
-      {/* 9 Calles Verticales */}
+      {/* Calles Verticales */}
       {Array.from({ length: cols - 1 }).map((_, i) => {
         const x = (i - (cols - 2) / 2) * spacing;
         return (
           <mesh key={`v-street-${i}`} position={[x, 0.015, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[0.3, 14.8]} />
+            <planeGeometry args={[0.3, rows * spacing - 0.2]} />
             <meshStandardMaterial color="#e2e8f0" roughness={0.9} />
           </mesh>
         );
       })}
 
-      {/* 5 Calles Horizontales */}
+      {/* Calles Horizontales */}
       {Array.from({ length: rows - 1 }).map((_, i) => {
         const z = (i - (rows - 2) / 2) * spacing;
         return (
           <mesh key={`h-street-${i}`} position={[0, 0.015, z]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[24.8, 0.3]} />
+            <planeGeometry args={[cols * spacing - 0.2, 0.3]} />
             <meshStandardMaterial color="#e2e8f0" roughness={0.9} />
           </mesh>
         );

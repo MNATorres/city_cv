@@ -79,8 +79,8 @@ export const Traffic: React.FC<TrafficProps> = ({ carPaths, pedestrianPaths }) =
       if (!path) return;
 
       // Calcular el largo total estimado del camino para avanzar de manera consistente
-      // Avance: velocidad * delta / perímetro aproximado (aprox. 70 unidades de rejilla para 10x6)
-      const perimeter = 70;
+      // Avance: velocidad * delta / perímetro aproximado (anillo perimetral de la metrópolis 16x10)
+      const perimeter = 120;
       carProgress.current[idx] += (config.speed * delta) / perimeter;
 
       const { pos, dir } = getPositionOnPath(path, carProgress.current[idx], config.heightOffset);
@@ -101,7 +101,7 @@ export const Traffic: React.FC<TrafficProps> = ({ carPaths, pedestrianPaths }) =
       const path = pedestrianPaths[0]; // Usar la primera ruta peatonal
       if (!path) return;
 
-      const perimeter = 40; // Perímetro peatonal menor ajustado para 10x6
+      const perimeter = 60; // Perímetro peatonal interior ajustado para 16x10
       pedProgress.current[idx] += (config.speed * delta) / perimeter;
 
       const { pos, dir } = getPositionOnPath(path, pedProgress.current[idx], 0.05);

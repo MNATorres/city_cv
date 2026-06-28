@@ -88,7 +88,7 @@ const CameraController: React.FC<CameraControllerProps> = ({ focusedBuildingPos 
       enableDamping
       dampingFactor={0.05}
       screenSpacePanning={true}
-      minZoom={20}
+      minZoom={14}
       maxZoom={90}
       maxPolarAngle={Math.PI / 2.1} // Permite girar y ver casi de lado
       minPolarAngle={0.05} // Permite vista cenital
@@ -144,7 +144,7 @@ export const MainCanvas: React.FC<MainCanvasProps> = ({
         <OrthographicCamera
           makeDefault
           position={[12, 12, 12]}
-          zoom={35}
+          zoom={24} // Alejado para encuadrar la metrópolis ampliada
           near={-500}
           far={1000}
         />
