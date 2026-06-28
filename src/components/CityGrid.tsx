@@ -79,6 +79,34 @@ const MeadowBush: React.FC<{ position: [number, number, number]; scale?: number 
   );
 };
 
+// Farola urbana de bajo poligonaje (poste + brazo + cabezal cálido emisivo)
+const StreetLamp: React.FC<{ position: [number, number, number]; rotation?: number }> = ({ position, rotation = 0 }) => {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      {/* Base */}
+      <mesh castShadow position={[0, 0.05, 0]}>
+        <cylinderGeometry args={[0.08, 0.1, 0.1, 8]} />
+        <meshStandardMaterial color="#475569" roughness={0.6} metalness={0.4} />
+      </mesh>
+      {/* Poste */}
+      <mesh castShadow position={[0, 0.65, 0]}>
+        <cylinderGeometry args={[0.035, 0.05, 1.2, 8]} />
+        <meshStandardMaterial color="#64748b" roughness={0.5} metalness={0.5} />
+      </mesh>
+      {/* Brazo curvo */}
+      <mesh castShadow position={[0.18, 1.22, 0]}>
+        <boxGeometry args={[0.4, 0.05, 0.05]} />
+        <meshStandardMaterial color="#64748b" roughness={0.5} metalness={0.5} />
+      </mesh>
+      {/* Cabezal luminoso cálido */}
+      <mesh position={[0.36, 1.16, 0]}>
+        <boxGeometry args={[0.16, 0.08, 0.12]} />
+        <meshStandardMaterial color="#fff4d6" emissive="#ffd27a" emissiveIntensity={1.4} roughness={0.3} />
+      </mesh>
+    </group>
+  );
+};
+
 // Componente para un Parque con árboles procedimentales bajos en polígonos
 const Park: React.FC<{ position: [number, number, number] }> = ({ position }) => {
   return (
@@ -441,6 +469,26 @@ export const CityGrid: React.FC<CityGridProps> = ({
     return dashes;
   }, [cols, rows, spacing, vStreetLen, hStreetLen]);
 
+  // Farolas distribuidas a lo largo del anillo perimetral, mirando hacia la calzada
+  const lamps = React.useMemo(() => {
+    const list: { pos: [number, number, number]; rot: number }[] = [];
+    const lx = ringX + 0.55; // justo en la vereda exterior del anillo
+    const lz = ringZ + 0.55;
+    const stepX = (2 * ringX) / 7;
+    const stepZ = (2 * ringZ) / 5;
+    for (let i = 0; i <= 7; i++) {
+      const x = -ringX + i * stepX;
+      list.push({ pos: [x, 0, -lz], rot: 0 });          // borde trasero, brazo hacia +Z (calle)
+      list.push({ pos: [x, 0, lz], rot: Math.PI });      // borde delantero, brazo hacia -Z
+    }
+    for (let i = 1; i < 5; i++) {
+      const z = -ringZ + i * stepZ;
+      list.push({ pos: [-lx, 0, z], rot: -Math.PI / 2 }); // borde izquierdo
+      list.push({ pos: [lx, 0, z], rot: Math.PI / 2 });   // borde derecho
+    }
+    return list;
+  }, [ringX, ringZ]);
+
   return (
     <group>
       {/* ISLA PRINCIPAL: Plato de concreto blanco que delimita la ciudad. Fuera de esto no hay detalles */}
@@ -500,6 +548,11 @@ export const CityGrid: React.FC<CityGridProps> = ({
           <Instance key={`dash-${i}`} position={d.pos} rotation={[-Math.PI / 2, 0, 0]} scale={d.scale} />
         ))}
       </Instances>
+
+      {/* FAROLAS PERIMETRALES */}
+      {lamps.map((l, i) => (
+        <StreetLamp key={`lamp-${i}`} position={l.pos} rotation={l.rot} />
+      ))}
 
       {/* RENDERIZADO DE LAS MANZANAS, EDIFICIOS Y PARQUES */}
       {renderBlocks()}
