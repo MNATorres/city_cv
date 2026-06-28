@@ -183,9 +183,16 @@ export const CityGrid: React.FC<CityGridProps> = ({
   const blockHash = (c: number, r: number): number =>
     Math.abs(Math.sin(c * 49.13 + r * 91.7) * 43758.5453) % 1.0;
 
-  // Mitad del ancho/profundidad del anillo de calles perimetrales (justo dentro de la ciudad)
-  const ringX = (cols / 2 - 0.5) * spacing; // 18.75
-  const ringZ = (rows / 2 - 0.5) * spacing; // 11.25
+  // Anillo perimetral de tráfico: debe caer sobre las calles externas, no sobre las
+  // manzanas. Las calles están en (i-(cols-2)/2)*spacing, así que la calle más externa
+  // está en ±(cols-2)/2*spacing. Usar (cols/2-0.5) cae sobre el centro de la última
+  // columna de manzanas (= autos atravesando edificios).
+  const ringX = (cols / 2 - 1) * spacing; // 17.5 — calle vertical más externa
+  const ringZ = (rows / 2 - 1) * spacing; // 10   — calle horizontal más externa
+
+  // Anillo peatonal interior, también alineado a calles reales (múltiplos de spacing)
+  const pedX = 3 * spacing; // 7.5
+  const pedZ = 2 * spacing; // 5.0
 
   // Coordenadas de los caminos de tráfico (anillo perimetral de la metrópolis)
   const carPaths = [
@@ -199,10 +206,10 @@ export const CityGrid: React.FC<CityGridProps> = ({
 
   const pedestrianPaths = [
     [
-      { x: -ringX / 2, y: 0.03, z: -ringZ / 2 },
-      { x: ringX / 2, y: 0.03, z: -ringZ / 2 },
-      { x: ringX / 2, y: 0.03, z: ringZ / 2 },
-      { x: -ringX / 2, y: 0.03, z: ringZ / 2 },
+      { x: -pedX, y: 0.03, z: -pedZ },
+      { x: pedX, y: 0.03, z: -pedZ },
+      { x: pedX, y: 0.03, z: pedZ },
+      { x: -pedX, y: 0.03, z: pedZ },
     ]
   ];
 
