@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, OrthographicCamera } from '@react-three/drei';
+import { OrbitControls, OrthographicCamera, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import { CityGrid } from './CityGrid';
 import { cvData } from '../cvData';
@@ -127,8 +127,14 @@ export const MainCanvas: React.FC<MainCanvasProps> = ({
   return (
     <div className="canvas-container">
       <Canvas
-        shadows
-        gl={{ antialias: true, alpha: false }}
+        shadows="soft" // Sombras suaves (PCFSoftShadowMap) para un acabado más realista
+        dpr={[1, 2]} // Renderizado nítido en pantallas retina sin penalizar equipos modestos
+        gl={{
+          antialias: true,
+          alpha: false,
+          toneMapping: THREE.ACESFilmicToneMapping, // Mapeo de tonos cinematográfico
+          toneMappingExposure: 1.05,
+        }}
         onPointerMissed={() => onSelectBuilding(null)} // Cerrar modal al hacer clic en el vacío
       >
         {/* Color de fondo del Canvas (combinado con el CSS de la app) */}
@@ -144,40 +150,52 @@ export const MainCanvas: React.FC<MainCanvasProps> = ({
         />
 
         {/* Luces atmosféricas diurnas */}
-        {/* 1. Luz Ambiental blanca brillante */}
-        <ambientLight intensity={0.7} color="#ffffff" />
+        {/* 1. Luz Ambiental suave (el grueso del relleno viene del cielo hemisférico) */}
+        <ambientLight intensity={0.45} color="#ffffff" />
 
-        {/* 2. Luz Direccional Principal: Sol brillante (blanco/cálido suave) */}
+        {/* 2. Luz Direccional Principal: Sol brillante con sombras suaves de alta resolución */}
         <directionalLight
-          position={[15, 30, 10]}
-          intensity={1.3}
-          color="#ffffff"
+          position={[18, 34, 14]}
+          intensity={2.0}
+          color="#fff7ec" // Luz solar levemente cálida
           castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-          shadow-camera-left={-20}
-          shadow-camera-right={20}
-          shadow-camera-top={20}
-          shadow-camera-bottom={-20}
+          shadow-mapSize-width={4096}
+          shadow-mapSize-height={4096}
+          shadow-camera-left={-26}
+          shadow-camera-right={26}
+          shadow-camera-top={26}
+          shadow-camera-bottom={-26}
           shadow-camera-near={0.1}
-          shadow-camera-far={100}
-          shadow-bias={-0.0005}
+          shadow-camera-far={120}
+          shadow-bias={-0.0004}
+          shadow-normalBias={0.02}
         />
 
-        {/* 3. Luz Secundaria de Relleno blanca suave */}
+        {/* 3. Luz Secundaria de Relleno fría para simular el rebote del cielo */}
         <directionalLight
-          position={[-15, 10, -10]}
-          intensity={0.3}
-          color="#ffffff"
+          position={[-18, 14, -12]}
+          intensity={0.45}
+          color="#cfe8ff"
         />
 
-        {/* 4. Luz de Rebote en el Suelo */}
+        {/* 4. Luz de Rebote Cielo/Suelo (azul cielo arriba, verde césped abajo) */}
         <hemisphereLight
-          args={['#ffffff', '#bbf7d0', 0.45]}
+          args={['#cfe9ff', '#a7e8b8', 0.7]}
+        />
+
+        {/* 5. Sombra de contacto suave bajo la ciudad para anclarla al suelo */}
+        <ContactShadows
+          position={[0, 0.02, 0]}
+          scale={70}
+          resolution={1024}
+          blur={2.6}
+          opacity={0.42}
+          far={12}
+          color="#1e3a5f"
         />
 
         {/* Niebla clara diurna para profundidad espacial */}
-        <fog attach="fog" args={['#bae6fd', 45, 100]} />
+        <fog attach="fog" args={['#bae6fd', 55, 130]} />
 
         {/* Grid de la ciudad, calles y edificios envuelto en Suspense para carga de modelos GLB */}
         <React.Suspense fallback={null}>
