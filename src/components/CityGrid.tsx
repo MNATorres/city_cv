@@ -210,24 +210,26 @@ export const CityGrid: React.FC<CityGridProps> = ({
   const pedX = 3 * spacing; // 7.5
   const pedZ = 2 * spacing; // 5.0
 
-  // Coordenadas de los caminos de tráfico (anillo perimetral de la metrópolis)
-  const carPaths = [
-    [
-      { x: -ringX, y: 0.1, z: -ringZ },
-      { x: ringX, y: 0.1, z: -ringZ },
-      { x: ringX, y: 0.1, z: ringZ },
-      { x: -ringX, y: 0.1, z: ringZ },
-    ]
+  // Circuitos de tráfico: varios anillos concéntricos, todos sobre calles reales
+  // (múltiplos de spacing), para que los autos circulen por toda la ciudad y no
+  // solo por el borde. Memoizados para no re-crear la referencia en cada render.
+  const rect = (rx: number, rz: number, yy: number) => [
+    { x: -rx, y: yy, z: -rz },
+    { x: rx, y: yy, z: -rz },
+    { x: rx, y: yy, z: rz },
+    { x: -rx, y: yy, z: rz },
   ];
+  const carPaths = React.useMemo(() => [
+    rect(ringX, ringZ, 0.1),          // anillo exterior (17.5 x 10)
+    rect(4 * spacing, 3 * spacing, 0.1), // anillo medio-externo (10 x 7.5)
+    rect(3 * spacing, 2 * spacing, 0.1), // anillo medio (7.5 x 5)
+    rect(spacing, spacing, 0.1),      // anillo interior (2.5 x 2.5)
+  ], [ringX, ringZ, spacing]);
 
-  const pedestrianPaths = [
-    [
-      { x: -pedX, y: 0.03, z: -pedZ },
-      { x: pedX, y: 0.03, z: -pedZ },
-      { x: pedX, y: 0.03, z: pedZ },
-      { x: -pedX, y: 0.03, z: pedZ },
-    ]
-  ];
+  const pedestrianPaths = React.useMemo(() => [
+    rect(pedX, pedZ, 0.03),
+    rect(2 * spacing, spacing, 0.03), // segundo circuito peatonal (5 x 2.5)
+  ], [pedX, pedZ, spacing]);
 
   // ¿Esta manzana (en coordenadas del CV) es un parque del núcleo?
   const checkIsCorePark = (cvC: number, cvR: number): boolean => {
