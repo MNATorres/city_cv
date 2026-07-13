@@ -183,6 +183,22 @@ export const CityGrid: React.FC<CityGridProps> = ({
   const blockHash = (c: number, r: number): number =>
     Math.abs(Math.sin(c * 49.13 + r * 91.7) * 43758.5453) % 1.0;
 
+  // Semilla determinista continua a partir de coordenadas del mundo
+  const coordSeed = (px: number, pz: number): number =>
+    Math.abs(Math.sin(px * 127.1 + pz * 311.7) * 43758.5453) % 1.0;
+
+  // Tipos de rascacielos disponibles para el downtown
+  type TowerType = 'factory' | 'laboratory' | 'beacon' | 'port';
+  const towerTypes: TowerType[] = ['factory', 'laboratory', 'beacon', 'port'];
+
+  // Factor de "centralidad" de una manzana: 1 en el centro, 0 en el borde
+  const centralFactor = (px: number, pz: number): number =>
+    Math.max(0, Math.min(1, 1 - Math.hypot(px, pz) / 19));
+
+  // Perfil de casa de relleno: más altas cerca del centro, más bajas en el suburbio
+  const houseHeight = (factor: number, seed: number): number =>
+    0.82 + seed * 0.5 + factor * 0.9;
+
   // Anillo perimetral de tráfico: debe caer sobre las calles externas, no sobre las
   // manzanas. Las calles están en (i-(cols-2)/2)*spacing, así que la calle más externa
   // está en ±(cols-2)/2*spacing. Usar (cols/2-0.5) cae sobre el centro de la última
@@ -279,6 +295,7 @@ export const CityGrid: React.FC<CityGridProps> = ({
               size={[1, 1]}
               isSelected={selectedBuildingId === 'hq'}
               onClick={() => onSelectBuilding('hq')}
+              heightScale={1.3}
             />
           );
           continue;
@@ -318,6 +335,32 @@ export const CityGrid: React.FC<CityGridProps> = ({
             </mesh>
           </group>
         );
+
+        const hasCV = !!(expItem || projItem || eduItem || skillItem);
+        const factor = centralFactor(x, z);
+
+        // DOWNTOWN: manzanas centrales sin CV -> un único rascacielos por lote
+        // (más realista y mucho más liviano que 4 torres por manzana).
+        if (!hasCV && factor > 0.6) {
+          const seed = coordSeed(x, z);
+          const towerType = towerTypes[Math.floor(seed * 997) % towerTypes.length];
+          const towerId = `${blockId}-q0`;
+          blocks.push(
+            <Building
+              key={`building-${towerId}`}
+              id={towerId}
+              name="Torre Corporativa"
+              type={towerType}
+              position={[x, y, z]}
+              size={[1, 1]}
+              isSelected={selectedBuildingId === towerId}
+              onClick={() => onSelectBuilding(towerId)}
+              scale={1.55}
+              heightScale={1.5 + seed * 1.7}
+            />
+          );
+          continue;
+        }
 
         // Definir los 4 cuadrantes dentro de la manzana (grid de 2x2)
         const o = 0.45; // Offset respecto al centro
@@ -393,18 +436,21 @@ export const CityGrid: React.FC<CityGridProps> = ({
               );
             }
           } else {
-            // Casas comunes de relleno decorativo
+            // Casas de relleno: más altas cerca del centro, más bajas hacia el borde
+            const seed = coordSeed(subPos[0], subPos[2]);
+            const heightScale = houseHeight(centralFactor(subPos[0], subPos[2]), seed);
             blocks.push(
               <Building
                 key={`building-${subId}`}
                 id={subId}
-                name="Sector Residencial"
+                name="Sector Urbano"
                 type="house"
                 position={subPos}
                 size={[0.5, 0.5]}
                 isSelected={selectedBuildingId === subId}
                 onClick={() => onSelectBuilding(subId)}
                 scale={scaleFactor}
+                heightScale={heightScale}
               />
             );
           }

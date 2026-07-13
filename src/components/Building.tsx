@@ -12,6 +12,7 @@ interface BuildingProps {
   isSelected: boolean;
   onClick: () => void;
   scale?: number;
+  heightScale?: number; // Estira el edificio en Y para crear variedad de skyline
 }
 
 export const Building: React.FC<BuildingProps> = ({
@@ -21,6 +22,7 @@ export const Building: React.FC<BuildingProps> = ({
   isSelected,
   onClick,
   scale = 1.0,
+  heightScale = 1.0,
 }) => {
   const [hovered, setHovered] = useState(false);
   const groupRef = useRef<THREE.Group>(null);
@@ -158,11 +160,11 @@ export const Building: React.FC<BuildingProps> = ({
         document.body.style.cursor = '';
       }}
     >
-      {/* Modelo Kenney GLTF clonado */}
+      {/* Modelo Kenney GLTF clonado (con variación de altura para el skyline) */}
       <primitive
         object={clonedScene}
         rotation={[0, houseRotation, 0]}
-        scale={[baseScale, baseScale, baseScale]}
+        scale={[baseScale, baseScale * heightScale, baseScale]}
         position={[0, 0.02, 0]}
       />
 
