@@ -258,9 +258,10 @@ export const CityGrid: React.FC<CityGridProps> = ({
         const isHQ = inCore && cvC === 4 && cvR === 2;
 
         // Parques: los del núcleo en posiciones fijas; en el anillo exterior, dispersos
+        // (más frecuentes para una ciudad más verde)
         const isPark = inCore
           ? checkIsCorePark(cvC, cvR)
-          : blockHash(c, r) < 0.28;
+          : blockHash(c, r) < 0.36;
 
         if (isPark) {
           blocks.push(<Park key={blockId} position={[x, y, z]} />);
@@ -469,11 +470,11 @@ export const CityGrid: React.FC<CityGridProps> = ({
   const vegetation = React.useMemo(() => {
     const items: { tree: boolean; pos: [number, number, number]; scale: number }[] = [];
     const h = (n: number) => Math.abs(Math.sin(n * 127.1 + 311.7) * 43758.5453) % 1.0;
-    const halfX = islandW / 2 + 1.5; // empieza justo fuera de la isla
-    const halfZ = islandD / 2 + 1.5;
-    const bands = 2;     // profundidad del bosque
-    const perX = 17;     // densidad lados superior/inferior
-    const perZ = 11;     // densidad lados izquierdo/derecho
+    const halfX = islandW / 2 + 1.2; // empieza justo fuera de la isla
+    const halfZ = islandD / 2 + 1.2;
+    const bands = 3;     // profundidad del bosque (más frondoso)
+    const perX = 22;     // densidad lados superior/inferior
+    const perZ = 14;     // densidad lados izquierdo/derecho
     let k = 1;
     for (let b = 0; b < bands; b++) {
       const gx = halfX + b * 3.4;
